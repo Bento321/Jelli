@@ -30,10 +30,12 @@ import java.util.function.Consumer;
 public class AutoMediaBrowser {
     private final Context context;
     private final Consumer<List<Song>> playCallback;
+    private final Consumer<List<Song>> shuffleCallback;
 
-    public AutoMediaBrowser(Context context, Consumer<List<Song>> playCallback) {
+    public AutoMediaBrowser(Context context, Consumer<List<Song>> playCallback, Consumer<List<Song>> shuffleCallback) {
         this.context = context;
         this.playCallback = playCallback;
+        this.shuffleCallback = shuffleCallback;
     }
 
     public static Bundle rootHints() {
@@ -106,6 +108,36 @@ public class AutoMediaBrowser {
     public void playFromMediaId(@NonNull String mediaId, Bundle extras) {
         if (!isAuthenticated()) return;
 
+        // Favorite song: queue all favorites starting from the tapped song
+        String favSongId = MediaId.extractId(mediaId, MediaId.PREFIX_FAVORITE_SONG);
+        if (favSongId != null) {
+            final String targetId = favSongId;
+            QueryUtil.getFavoriteSongs(songs -> {
+                int startIndex = 0;
+                for (int i = 0; i < songs.size(); i++) {
+                    if (songs.get(i).id.equals(targetId)) {
+                        startIndex = i;
+                        break;
+                    }
+                }
+                List<Song> ordered = new ArrayList<>();
+                ordered.addAll(songs.subList(startIndex, songs.size()));
+                ordered.addAll(songs.subList(0, startIndex));
+                playCallback.accept(ordered);
+            });
+            return;
+        }
+
+        if (MediaId.SHUFFLE_FAVORITES.equals(mediaId)) {
+            QueryUtil.getFavoriteSongs(shuffleCallback::accept);
+            return;
+        }
+
+        if (MediaId.SHUFFLE_SONGS.equals(mediaId)) {
+            QueryUtil.getSongs(new org.jellyfin.apiclient.model.querying.ItemQuery(), shuffleCallback::accept);
+            return;
+        }
+
         String songId = MediaId.extractId(mediaId, MediaId.PREFIX_SONG);
         if (songId != null) {
             QueryUtil.getItemById(songId, new Response<BaseItemDto>() {
@@ -155,11 +187,11 @@ public class AutoMediaBrowser {
 
     private List<MediaItem> buildRoot() {
         List<MediaItem> items = new ArrayList<>(5);
+        items.add(browsable(MediaId.FAVORITES, context.getString(R.string.favorites), null));
         items.add(browsable(MediaId.PLAYLISTS, context.getString(R.string.playlists), null));
         items.add(browsable(MediaId.ALBUMS, context.getString(R.string.albums), null));
         items.add(browsable(MediaId.ARTISTS, context.getString(R.string.artists), null));
         items.add(browsable(MediaId.SONGS, context.getString(R.string.songs), null));
-        items.add(browsable(MediaId.FAVORITES, context.getString(R.string.favorites), null));
         return items;
     }
 
@@ -203,11 +235,23 @@ public class AutoMediaBrowser {
     private void loadSongs(Result<List<MediaItem>> result, String parentId) {
         org.jellyfin.apiclient.model.querying.ItemQuery query = new org.jellyfin.apiclient.model.querying.ItemQuery();
         if (parentId != null) query.setParentId(parentId);
-        QueryUtil.getSongs(query, songs -> result.sendResult(toSongItems(songs)));
+        QueryUtil.getSongs(query, songs -> {
+            List<MediaItem> items = new ArrayList<>(songs.size() + 1);
+            items.add(shufflePlayable(MediaId.SHUFFLE_SONGS, context.getString(R.string.action_shuffle_all)));
+            items.addAll(toSongItems(songs));
+            result.sendResult(items);
+        });
     }
 
     private void loadFavorites(Result<List<MediaItem>> result) {
-        QueryUtil.getFavoriteSongs(songs -> result.sendResult(toSongItems(songs)));
+        QueryUtil.getFavoriteSongs(songs -> {
+            List<MediaItem> items = new ArrayList<>(songs.size() + 1);
+            items.add(shufflePlayable(MediaId.SHUFFLE_FAVORITES, context.getString(R.string.action_shuffle_all)));
+            for (Song song : songs) {
+                items.add(playable(MediaId.forFavoriteSong(song.id), song.title, song.artistName, imageUri(song.primary)));
+            }
+            result.sendResult(items);
+        });
     }
 
     private List<MediaItem> toAlbumItems(List<Album> albums) {
@@ -232,6 +276,13 @@ public class AutoMediaBrowser {
                     imageUri(song.primary)));
         }
         return items;
+    }
+
+    private MediaItem shufflePlayable(String mediaId, String title) {
+        MediaDescriptionCompat.Builder b = new MediaDescriptionCompat.Builder()
+                .setMediaId(mediaId)
+                .setTitle(title);
+        return new MediaItem(b.build(), MediaItem.FLAG_PLAYABLE);
     }
 
     private MediaItem browsable(String mediaId, String title, Uri icon) {

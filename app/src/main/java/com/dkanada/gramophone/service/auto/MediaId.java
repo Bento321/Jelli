@@ -16,6 +16,10 @@ public final class MediaId {
     public static final String PREFIX_ALBUM = "gelli/album/";
     public static final String PREFIX_ARTIST = "gelli/artist/";
     public static final String PREFIX_SONG = "gelli/song/";
+    public static final String PREFIX_FAVORITE_SONG = "gelli/favorites/song/";
+
+    public static final String SHUFFLE_FAVORITES = "gelli/shuffle/favorites";
+    public static final String SHUFFLE_SONGS = "gelli/shuffle/songs";
 
     private MediaId() {
     }
@@ -38,6 +42,11 @@ public final class MediaId {
     @NonNull
     public static String forSong(@NonNull String id) {
         return PREFIX_SONG + id;
+    }
+
+    @NonNull
+    public static String forFavoriteSong(@NonNull String id) {
+        return PREFIX_FAVORITE_SONG + id;
     }
 
     @Nullable

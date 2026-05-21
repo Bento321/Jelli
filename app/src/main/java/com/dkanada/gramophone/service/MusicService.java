@@ -232,7 +232,8 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
             | PlaybackStateCompat.ACTION_STOP
             | PlaybackStateCompat.ACTION_SEEK_TO
             | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
-            | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH;
+            | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
+            | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE;
 
     private AutoMediaBrowser autoMediaBrowser;
 
@@ -272,13 +273,23 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
 
         mediaSession.setActive(true);
 
-        autoMediaBrowser = new AutoMediaBrowser(getApplicationContext(), this::playSongsFromBrowser);
+        autoMediaBrowser = new AutoMediaBrowser(getApplicationContext(), this::playSongsFromBrowser, this::playSongsShuffledFromBrowser);
         setSessionToken(mediaSession.getSessionToken());
+        mediaSession.setShuffleMode(queueManager.getShuffleMode());
     }
 
     private void playSongsFromBrowser(@NonNull List<Song> songs) {
         if (songs.isEmpty()) return;
         runOnUiThread(() -> openQueue(songs, 0, true));
+    }
+
+    private void playSongsShuffledFromBrowser(@NonNull List<Song> songs) {
+        if (songs.isEmpty()) return;
+        int startIndex = new Random().nextInt(songs.size());
+        runOnUiThread(() -> {
+            openQueue(songs, startIndex, true);
+            queueManager.setShuffleMode(QueueManager.SHUFFLE_MODE_SHUFFLE);
+        });
     }
 
     private void initMediaSession() {
@@ -333,6 +344,14 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
                 if (autoMediaBrowser != null) {
                     autoMediaBrowser.playFromSearch(query, extras);
                 }
+            }
+
+            @Override
+            public void onSetShuffleMode(int shuffleMode) {
+                int mode = shuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL
+                        ? QueueManager.SHUFFLE_MODE_SHUFFLE
+                        : QueueManager.SHUFFLE_MODE_NONE;
+                queueManager.setShuffleMode(mode);
             }
 
             @Override
@@ -506,6 +525,10 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
 
     public boolean isPlaying() {
         return playback != null && playback.isPlaying();
+    }
+
+    public boolean isActive() {
+        return playback != null && playback.isReady();
     }
 
     public boolean isLoading() {
@@ -698,6 +721,9 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
                 break;
             case QUEUE_CHANGED:
                 updateMediaSessionMetadata();
+                break;
+            case SHUFFLE_MODE_CHANGED:
+                mediaSession.setShuffleMode(queueManager.getShuffleMode());
                 break;
         }
     }

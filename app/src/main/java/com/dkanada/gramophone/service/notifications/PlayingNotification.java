@@ -42,19 +42,23 @@ public abstract class PlayingNotification {
     }
 
     void updateNotifyModeAndPostNotification(Notification notification) {
-        int newNotifyMode;
-        if (service.isPlaying()) {
-            newNotifyMode = NOTIFY_MODE_FOREGROUND;
-        } else {
-            newNotifyMode = NOTIFY_MODE_BACKGROUND;
-        }
+        // isActive() = playWhenReady: stays true during transient audio-focus loss (phone call)
+        int newNotifyMode = service.isActive() ? NOTIFY_MODE_FOREGROUND : NOTIFY_MODE_BACKGROUND;
 
         if (notifyMode != newNotifyMode && newNotifyMode == NOTIFY_MODE_BACKGROUND) {
             service.stopForeground(false);
         }
 
         if (newNotifyMode == NOTIFY_MODE_FOREGROUND) {
-            service.startForeground(NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    service.startForeground(NOTIFICATION_ID, notification);
+                } catch (android.app.ForegroundServiceStartNotAllowedException e) {
+                    notificationManager.notify(NOTIFICATION_ID, notification);
+                }
+            } else {
+                service.startForeground(NOTIFICATION_ID, notification);
+            }
         } else {
             notificationManager.notify(NOTIFICATION_ID, notification);
         }
