@@ -2,7 +2,6 @@ package com.dkanada.gramophone.service;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -16,6 +15,7 @@ import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -30,6 +30,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media.MediaBrowserServiceCompat;
 
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.target.CustomTarget;
@@ -41,6 +42,9 @@ import com.dkanada.gramophone.glide.BlurTransformation;
 import com.dkanada.gramophone.glide.CustomGlideRequest;
 import com.dkanada.gramophone.model.Playlist;
 import com.dkanada.gramophone.model.Song;
+import com.dkanada.gramophone.service.auto.AutoMediaBrowser;
+import com.dkanada.gramophone.service.auto.MediaId;
+import com.dkanada.gramophone.service.auto.PackageValidator;
 import com.dkanada.gramophone.service.notifications.PlayingNotification;
 import com.dkanada.gramophone.service.notifications.PlayingNotificationMarshmallow;
 import com.dkanada.gramophone.service.notifications.PlayingNotificationNougat;
@@ -75,7 +79,7 @@ import static com.google.android.exoplayer2.Player.MEDIA_ITEM_TRANSITION_REASON_
 import static com.google.android.exoplayer2.Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED;
 import static com.google.android.exoplayer2.Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM;
 
-public class MusicService extends Service implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class MusicService extends MediaBrowserServiceCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final String PACKAGE_NAME = BuildConfig.APPLICATION_ID;
 
     public static final String ACTION_TOGGLE = PACKAGE_NAME + ".toggle";
@@ -226,7 +230,11 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
             | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
             | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             | PlaybackStateCompat.ACTION_STOP
-            | PlaybackStateCompat.ACTION_SEEK_TO;
+            | PlaybackStateCompat.ACTION_SEEK_TO
+            | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
+            | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH;
+
+    private AutoMediaBrowser autoMediaBrowser;
 
     @Override
     public void onCreate() {
@@ -263,6 +271,14 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
         restoreState();
 
         mediaSession.setActive(true);
+
+        autoMediaBrowser = new AutoMediaBrowser(getApplicationContext(), this::playSongsFromBrowser);
+        setSessionToken(mediaSession.getSessionToken());
+    }
+
+    private void playSongsFromBrowser(@NonNull List<Song> songs) {
+        if (songs.isEmpty()) return;
+        runOnUiThread(() -> openQueue(songs, 0, true));
     }
 
     private void initMediaSession() {
@@ -303,6 +319,20 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
             @Override
             public void onSeekTo(long pos) {
                 seek((int) pos);
+            }
+
+            @Override
+            public void onPlayFromMediaId(String mediaId, android.os.Bundle extras) {
+                if (mediaId != null && autoMediaBrowser != null) {
+                    autoMediaBrowser.playFromMediaId(mediaId, extras);
+                }
+            }
+
+            @Override
+            public void onPlayFromSearch(String query, android.os.Bundle extras) {
+                if (autoMediaBrowser != null) {
+                    autoMediaBrowser.playFromSearch(query, extras);
+                }
             }
 
             @Override
@@ -389,7 +419,28 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
 
     @Override
     public IBinder onBind(Intent intent) {
+        if (intent != null && MediaBrowserServiceCompat.SERVICE_INTERFACE.equals(intent.getAction())) {
+            return super.onBind(intent);
+        }
         return musicBinder;
+    }
+
+    @Nullable
+    @Override
+    public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
+        if (!PackageValidator.isCallerAllowed(this, clientPackageName, clientUid)) {
+            return null;
+        }
+        return new BrowserRoot(MediaId.ROOT, AutoMediaBrowser.rootHints());
+    }
+
+    @Override
+    public void onLoadChildren(@NonNull String parentId, @NonNull Result<List<android.support.v4.media.MediaBrowserCompat.MediaItem>> result) {
+        if (autoMediaBrowser == null) {
+            result.sendResult(java.util.Collections.emptyList());
+            return;
+        }
+        autoMediaBrowser.loadChildren(parentId, result);
     }
 
     private static final class QueueHandler extends Handler {
@@ -505,6 +556,7 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
         }
 
         final MediaMetadataCompat.Builder metaData = new MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, MediaId.forSong(song.id))
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.artistName)
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST, song.artistName)
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.albumName)

@@ -13,6 +13,7 @@ import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.querying.ArtistsQuery;
 import org.jellyfin.apiclient.model.querying.ItemFields;
+import org.jellyfin.apiclient.model.querying.ItemFilter;
 import org.jellyfin.apiclient.model.querying.ItemQuery;
 import org.jellyfin.apiclient.model.querying.ItemsByNameQuery;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
@@ -182,6 +183,35 @@ public class QueryUtil {
                 exception.printStackTrace();
             }
         });
+    }
+
+    public static void getFavoriteSongs(MediaCallback<Song> callback) {
+        ItemQuery query = new ItemQuery();
+        query.setFilters(new ItemFilter[]{ItemFilter.IsFavorite});
+        getSongs(query, callback);
+    }
+
+    public static void getSongsForAlbum(String albumId, MediaCallback<Song> callback) {
+        ItemQuery query = new ItemQuery();
+        query.setParentId(albumId);
+        getSongs(query, callback);
+    }
+
+    public static void getAlbumsForArtist(String artistId, MediaCallback<Album> callback) {
+        ItemQuery query = new ItemQuery();
+        query.setArtistIds(new String[]{artistId});
+        getAlbums(query, callback);
+    }
+
+    public static void searchSongs(String term, MediaCallback<Song> callback) {
+        ItemQuery query = new ItemQuery();
+        query.setSearchTerm(term);
+        getSongs(query, callback);
+    }
+
+    public static void getItemById(String id, Response<BaseItemDto> response) {
+        String userId = App.getApiClient().getCurrentUserId();
+        App.getApiClient().GetItemAsync(id, userId, response);
     }
 
     public static void applyProperties(ItemQuery query) {

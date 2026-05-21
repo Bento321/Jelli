@@ -68,7 +68,14 @@
 
         <service android:name=".service.DownloadService" />
         <service android:name=".service.LoginService" />
-        <service android:name=".service.MusicService" />
+        <service
+            android:name=".service.MusicService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
 
         <receiver android:name=".service.receivers.MediaButtonIntentReceiver" android:exported="false">
             <intent-filter>
@@ -82,6 +89,9 @@
         <meta-data
             android:name="com.lge.support.SPLIT_WINDOW"
             android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
         <receiver android:name=".views.widgets.BootReceiver" android:exported="false">
             <intent-filter>

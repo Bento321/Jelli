@@ -26,6 +26,7 @@ public final class PreferenceUtil {
 
     public static final String SERVER = "server";
     public static final String USER = "user";
+    public static final String SELECTED_LIBRARY = "selected_library";
 
     public static final String SHUFFLE = "shuffle";
     public static final String REPEAT = "repeat";
@@ -486,5 +487,13 @@ public final class PreferenceUtil {
 
     public void setUser(String user) {
         mPreferences.edit().putString(USER, user).apply();
+    }
+
+    public String getSelectedLibraryId() {
+        return mPreferences.getString(SELECTED_LIBRARY, null);
+    }
+
+    public void setSelectedLibraryId(String libraryId) {
+        mPreferences.edit().putString(SELECTED_LIBRARY, libraryId).apply();
     }
 }

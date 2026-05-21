@@ -73,9 +73,21 @@ public class MainActivity extends AbsMusicContentActivity implements CabHolder {
             menu.clear();
             QueryUtil.playlistsView = null;
 
+            String savedLibraryId = PreferenceUtil.getInstance(this).getSelectedLibraryId();
+            BaseItemDto preferred = null;
+            if (savedLibraryId != null) {
+                for (BaseItemDto itemDto : libraries) {
+                    if (savedLibraryId.equals(itemDto.getId())) {
+                        preferred = itemDto;
+                        break;
+                    }
+                }
+            }
+
             for (BaseItemDto itemDto : libraries) {
                 if (menu.size() == 0) {
-                    QueryUtil.currentLibrary = itemDto;
+                    QueryUtil.currentLibrary = preferred != null ? preferred : itemDto;
+                    PreferenceUtil.getInstance(this).setSelectedLibraryId(QueryUtil.currentLibrary.getId());
                 }
 
                 if ("playlists".equals(itemDto.getCollectionType())) {
@@ -157,6 +169,7 @@ public class MainActivity extends AbsMusicContentActivity implements CabHolder {
             for (BaseItemDto itemDto : libraries) {
                 if (menuItem.getItemId() == itemDto.getId().hashCode()) {
                     QueryUtil.currentLibrary = itemDto;
+                    PreferenceUtil.getInstance(this).setSelectedLibraryId(itemDto.getId());
                     setCurrentFragment(LibraryFragment.newInstance());
                     break;
                 }

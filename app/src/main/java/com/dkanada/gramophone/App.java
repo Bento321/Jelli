@@ -10,17 +10,21 @@ import androidx.room.Room;
 
 import com.dkanada.gramophone.database.JellyDatabase;
 import com.dkanada.gramophone.helper.EventListener;
+import com.dkanada.gramophone.model.User;
 import com.dkanada.gramophone.util.PreferenceUtil;
+import com.dkanada.gramophone.util.QueryUtil;
 import com.dkanada.gramophone.views.shortcuts.DynamicShortcutManager;
 import com.melegy.redscreenofdeath.RedScreenOfDeath;
 
 import org.jellyfin.apiclient.interaction.AndroidDevice;
 import org.jellyfin.apiclient.interaction.ApiClient;
+import org.jellyfin.apiclient.interaction.Response;
 import org.jellyfin.apiclient.interaction.VolleyHttpClient;
 import org.jellyfin.apiclient.interaction.device.IDevice;
 import org.jellyfin.apiclient.interaction.http.IAsyncHttpClient;
 import org.jellyfin.apiclient.logging.AndroidLogger;
 import org.jellyfin.apiclient.logging.ILogger;
+import org.jellyfin.apiclient.model.dto.BaseItemDto;
 
 public class App extends Application {
     private static App app;
@@ -43,11 +47,41 @@ public class App extends Application {
         if (database.userDao().getUsers().size() == 0) {
             PreferenceUtil.getInstance(this).setServer(null);
             PreferenceUtil.getInstance(this).setUser(null);
+        } else {
+            restoreAuthForBackgroundClients();
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             new DynamicShortcutManager(this).initDynamicShortcuts();
         }
+    }
+
+    private void restoreAuthForBackgroundClients() {
+        String savedUserId = PreferenceUtil.getInstance(this).getUser();
+        if (savedUserId == null) return;
+
+        User user = database.userDao().getUser(savedUserId);
+        if (user == null) return;
+
+        apiClient.ChangeServerLocation(user.server);
+        apiClient.SetAuthenticationInfo(user.token, user.id);
+
+        String savedLibraryId = PreferenceUtil.getInstance(this).getSelectedLibraryId();
+        if (savedLibraryId == null) return;
+
+        apiClient.GetItemAsync(savedLibraryId, user.id, new Response<BaseItemDto>() {
+            @Override
+            public void onResponse(BaseItemDto result) {
+                if (QueryUtil.currentLibrary == null) {
+                    QueryUtil.currentLibrary = result;
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                // Library scoping falls back to unscoped queries on failure.
+            }
+        });
     }
 
     public static JellyDatabase createDatabase(Context context) {
