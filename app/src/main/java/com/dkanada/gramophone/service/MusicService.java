@@ -32,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media.MediaBrowserServiceCompat;
 
+import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
@@ -131,6 +132,7 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
 
     private Handler uiThreadHandler;
     private ThrottledSeekHandler throttledSeekHandler;
+    private CustomTarget<Bitmap> metadataTarget;
     private QueueHandler queueHandler;
     private ProgressHandler progressHandler;
 
@@ -609,7 +611,10 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    request.into(new CustomTarget<Bitmap>(screenSize.x, screenSize.y) {
+                    if (metadataTarget != null) {
+                        Glide.with(MusicService.this).clear(metadataTarget);
+                    }
+                    metadataTarget = new CustomTarget<Bitmap>(screenSize.x, screenSize.y) {
                         @Override
                         public void onLoadFailed(Drawable drawable) {
                             super.onLoadFailed(drawable);
@@ -630,7 +635,8 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
                             super.onLoadFailed(drawable);
                             mediaSession.setMetadata(metaData.build());
                         }
-                    });
+                    };
+                    request.into(metadataTarget);
                 }
             });
         } else {
@@ -656,9 +662,7 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
     }
 
     public void pause() {
-        if (playback.isPlaying()) {
-            playback.pause();
-        }
+        playback.pause();
     }
 
     public void play() {
