@@ -23,6 +23,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
 import android.os.Process;
+import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -238,6 +239,7 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
             | PlaybackStateCompat.ACTION_PLAY_PAUSE
             | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
             | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+            | PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM
             | PlaybackStateCompat.ACTION_STOP
             | PlaybackStateCompat.ACTION_SEEK_TO
             | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
@@ -329,6 +331,11 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
             @Override
             public void onSkipToPrevious() {
                 back();
+            }
+
+            @Override
+            public void onSkipToQueueItem(long id) {
+                playSongAt((int) id);
             }
 
             @Override
@@ -575,7 +582,23 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
             new PlaybackStateCompat.Builder()
                 .setActions(MEDIA_SESSION_ACTIONS)
                 .setState(isPlaying() ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, getSongProgressMillis(), 1)
+                .setActiveQueueItemId(queueManager.getPosition())
                 .build());
+    }
+
+    private void updateMediaSessionQueue() {
+        List<Song> queue = queueManager.getPlayingQueue();
+        List<MediaSessionCompat.QueueItem> items = new ArrayList<>(queue.size());
+        for (int i = 0; i < queue.size(); i++) {
+            Song song = queue.get(i);
+            MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
+                    .setMediaId(MediaId.forSong(song.id))
+                    .setTitle(song.title)
+                    .setSubtitle(song.artistName)
+                    .build();
+            items.add(new MediaSessionCompat.QueueItem(desc, i));
+        }
+        mediaSession.setQueue(items);
     }
 
     @SuppressLint("CheckResult")
@@ -733,6 +756,7 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
                 PreferenceUtil.getInstance(this).setProgress(getSongProgressMillis());
                 break;
             case QUEUE_CHANGED:
+                updateMediaSessionQueue();
                 updateMediaSessionMetadata();
                 break;
             case SHUFFLE_MODE_CHANGED:
