@@ -1,6 +1,6 @@
 ## Jelli
 
-This is a fork of Gelli, a native music player for Android devices that connects to Jellyfin media servers. I created this fork to fix an issue I had with playlists, but have since added Android Auto support. 
+This is a fork of Gelli, a native music player for Android devices that connects to Jellyfin media servers. I created this fork to fix an issue I had with playlists, but have since added Android Auto support and made some other minor tweaks. 
 
 
 ## Features
