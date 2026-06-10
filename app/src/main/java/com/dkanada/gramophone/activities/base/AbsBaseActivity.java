@@ -7,8 +7,6 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.PowerManager;
-import android.provider.Settings;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -53,13 +51,7 @@ public abstract class AbsBaseActivity extends AbsThemeActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
             .setNegativeButton(R.string.ignore, (dialog, id) -> showWarning());
 
-        if (!checkBatteryOptimization()) {
-            builder.setMessage(R.string.battery_optimizations_message)
-                .setTitle(R.string.battery_optimizations_title)
-                .setPositiveButton(R.string.disable, (dialog, id) -> requestBatteryOptimization());
-
-            new Handler().postDelayed(builder::show, 2000);
-        } else if (permissions.size() != 0 && ActivityCompat.shouldShowRequestPermissionRationale(this, permissions.get(0))) {
+        if (permissions.size() != 0 && ActivityCompat.shouldShowRequestPermissionRationale(this, permissions.get(0))) {
             builder.setMessage(getPermissionMessage())
                 .setTitle(R.string.permissions_denied)
                 .setPositiveButton(R.string.action_grant, (dialog, id) -> requestPermissions());
@@ -111,24 +103,6 @@ public abstract class AbsBaseActivity extends AbsThemeActivity {
             .setAction(R.string.ignore, view -> { })
             .setActionTextColor(PreferenceUtil.getInstance(this).getAccentColor())
             .show();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private void requestBatteryOptimization() {
-        Intent intent = new Intent();
-
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-
-        startActivity(intent);
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private boolean checkBatteryOptimization() {
-        String packageName = getPackageName();
-        PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-
-        return pm.isIgnoringBatteryOptimizations(packageName);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

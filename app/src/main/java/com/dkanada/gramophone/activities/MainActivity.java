@@ -150,17 +150,14 @@ public class MainActivity extends AbsMusicContentActivity implements CabHolder {
 
         binding.navigationView.setNavigationItemSelectedListener(menuItem -> {
             binding.drawerLayout.closeDrawers();
-            switch (menuItem.getItemId()) {
-                case R.id.nav_settings:
-                    new Handler().postDelayed(() -> startActivity(new Intent(MainActivity.this, SettingsActivity.class)), 200);
-                    break;
-                case R.id.nav_about:
-                    new Handler().postDelayed(() -> startActivity(new Intent(MainActivity.this, AboutActivity.class)), 200);
-                    break;
-                case R.id.nav_logout:
-                    onLogout = true;
-                    ConfirmLogoutDialog.create().show(getSupportFragmentManager(), ConfirmLogoutDialog.TAG);
-                    break;
+            int _id = menuItem.getItemId();
+            if (_id == R.id.nav_settings) {
+                new Handler().postDelayed(() -> startActivity(new Intent(MainActivity.this, SettingsActivity.class)), 200);
+            } else if (_id == R.id.nav_about) {
+                new Handler().postDelayed(() -> startActivity(new Intent(MainActivity.this, AboutActivity.class)), 200);
+            } else if (_id == R.id.nav_logout) {
+                onLogout = true;
+                ConfirmLogoutDialog.create().show(getSupportFragmentManager(), ConfirmLogoutDialog.TAG);
             }
 
             // only run the following code when a new library has been selected

@@ -12,6 +12,7 @@ import android.os.IBinder;
 import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.dkanada.gramophone.R;
 import com.dkanada.gramophone.helper.MusicPlayerRemote;
@@ -83,7 +84,7 @@ public abstract class AbsMusicServiceActivity extends AbsBaseActivity implements
             filter.addAction(MusicService.META_CHANGED);
             filter.addAction(MusicService.QUEUE_CHANGED);
 
-            registerReceiver(musicStateReceiver, filter);
+            ContextCompat.registerReceiver(this, musicStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
             receiverRegistered = true;
         }

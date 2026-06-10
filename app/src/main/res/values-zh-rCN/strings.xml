@@ -72,8 +72,6 @@
     <string name="label_bit_depth">比特位深</string>
     <string name="label_channels">声道</string>
 
-    <string name="battery_optimizations_title">电池优化</string>
-    <string name="battery_optimizations_message">为了在关闭屏幕时继续播放，请关闭电池优化。</string>
     <string name="added_title_to_queue">"添加了1首歌到播放队列"</string>
     <string name="added_x_titles_to_queue">添加了 %1$d 首歌到播放队列</string>
     <string name="downloading_x_songs">正在下载 %1$d 首歌.</string>
@@ -189,7 +187,6 @@
     <string name="select">选择</string>
     <string name="add">添加</string>
     <string name="login">登录</string>
-    <string name="disable">禁用</string>
     <string name="ignore">忽略</string>
     <string name="sponsor">赞助</string>
     <string name="logout">登出</string>

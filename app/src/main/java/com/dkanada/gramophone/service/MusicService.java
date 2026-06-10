@@ -31,6 +31,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.media.MediaBrowserServiceCompat;
 
 import com.bumptech.glide.Glide;
@@ -273,8 +274,8 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
         throttledSeekHandler = new ThrottledSeekHandler(new Handler());
         uiThreadHandler = new Handler();
 
-        registerReceiver(widgetIntentReceiver, new IntentFilter(INTENT_EXTRA_WIDGET_UPDATE));
-        registerReceiver(becomingNoisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+        ContextCompat.registerReceiver(this, widgetIntentReceiver, new IntentFilter(INTENT_EXTRA_WIDGET_UPDATE), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, becomingNoisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         PreferenceUtil.getInstance(this).registerOnSharedPreferenceChangedListener(this);
 
@@ -731,7 +732,7 @@ public class MusicService extends MediaBrowserServiceCompat implements SharedPre
     }
 
     private void sendChangeInternal(final String what) {
-        sendBroadcast(new Intent(what));
+        sendBroadcast(new Intent(what).setPackage(getPackageName()));
 
         appWidgetAlbum.notifyChange(this, what, null);
         appWidgetClassic.notifyChange(this, what, null);

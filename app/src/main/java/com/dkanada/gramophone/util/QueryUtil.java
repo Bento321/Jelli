@@ -40,6 +40,8 @@ public class QueryUtil {
 
             @Override
             public void onError(Exception exception) {
+                // Callback is intentionally not called here; the caller (MainActivity.onStateOnline)
+                // will retry on the next onResume via LoginService restart in AbsMusicContentActivity.
                 exception.printStackTrace();
             }
         });

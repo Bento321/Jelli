@@ -74,8 +74,6 @@
     <string name="label_bit_depth">Bit Depth</string>
     <string name="label_channels">Channels</string>
 
-    <string name="battery_optimizations_title">Battery Optimizations</string>
-    <string name="battery_optimizations_message">Please disable battery optimizations for media playback while the screen is off.</string>
     <string name="added_title_to_queue">"Added 1 title to the queue."</string>
     <string name="added_x_titles_to_queue">Added %1$d titles to the queue.</string>
     <string name="downloading_x_songs">Downloading %1$d songs.</string>
@@ -193,7 +191,6 @@
     <string name="select">Select</string>
     <string name="add">Add</string>
     <string name="login">Login</string>
-    <string name="disable">Disable</string>
     <string name="ignore">Ignore</string>
     <string name="sponsor">Sponsor</string>
     <string name="logout">Logout</string>
